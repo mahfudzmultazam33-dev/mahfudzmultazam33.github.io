@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="id">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LKPD Digital</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+    body { height: 100%; font-family: 'Segoe UI', Tahoma, sans-serif; background: #f0f4f8; }
+
+    #loginScreen { display: flex; align-items: center; justify-content: center; min-height: 100%; background: linear-gradient(135deg, #1a56a0, #0e3a75); }
+    .login-card { background: white; border-radius: 18px; padding: 40px; width: 380px; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo .icon { font-size: 52px; }
+    .login-logo h1 { font-size: 22px; font-weight: 700; color: #1a56a0; margin-top: 8px; }
+    .login-logo p { font-size: 13px; color: #888; margin-top: 4px; }
+    .role-tabs { display: flex; gap: 6px; margin-bottom: 24px; background: #f0f4f8; padding: 5px; border-radius: 12px; }
+    .role-tab { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 9px; cursor: pointer; font-size: 14px; font-weight: 500; color: #666; transition: all 0.2s; }
+    .role-tab.active { background: white; color: #1a56a0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .form-group input { width: 100%; padding: 11px 14px; border: 1.5px solid #e0e0e0; border-radius: 9px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .form-group input:focus { border-color: #1a56a0; }
+    .btn-login { width: 100%; padding: 13px; background: #1a56a0; color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
+    .btn-login:hover { background: #154590; }
+    .hint { font-size: 12px; color: #999; text-align: center; margin-top: 14px; background: #f9f9f9; padding: 8px 12px; border-radius: 8px; }
+
+    #app { display: none; height: 100%; flex-direction: column; }
+    .header { background: #1a56a0; color: white; padding: 0 24px; height: 62px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-logo { font-size: 18px; font-weight: 700; }
+    .header-badge { background: rgba(255,255,255,0.2); padding: 3px 12px; border-radius: 20px; font-size: 12px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .user-info { font-size: 14px; opacity: 0.9; }
+    .btn-logout { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-logout:hover { background: rgba(255,255,255,0.3); }
+
+    .main-content { flex: 1; overflow-y: auto; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    .card { background: white; border-radius: 14px; padding: 22px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.06); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 2px solid #f0f4f8; }
+    .card-title { font-size: 16px; font-weight: 700; color: #1a3a6b; }
+
+    .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.18s; display: inline-flex; align-items: center; gap: 5px; }
+    .btn-primary { background: #1a56a0; color: white; }
+    .btn-primary:hover { background: #154590; }
+    .btn-success { background: #16a34a; color: white; }
+    .btn-success:hover { background: #15803d; }
+    .btn-warning { background: #d97706; color: white; }
+    .btn-warning:hover { background: #b45309; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-outline { background: transparent; border: 1.5px solid #1a56a0; color: #1a56a0; }
+    .btn-outline:hover { background: #e8f0fb; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+    .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; overflow-x: auto; }
+    .tab { padding: 10px 20px; cursor: pointer; border: none; background: none; font-size: 14px; font-weight: 600; color: #999; border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap; }
+    .tab.active { color: #1a56a0; border-bottom-color: #1a56a0; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: #555; margin-bottom: 6px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; border: 1.5px solid #e0e0e0; border-radius: 8px; font-size: 13px; outline: none; }
+    .form-group input:focus, .form-group textarea:focus { border-color: #1a56a0; }
+    .form-group textarea { resize: vertical; min-height: 80px; font-family: 'Segoe UI', sans-serif; }
+
+    .file-upload { border: 2px dashed #1a56a0; border-radius: 10px; padding: 30px; text-align: center; cursor: pointer; background: #f9f9f9; transition: all 0.2s; }
+    .file-upload:hover { background: #f0f4f8; }
+    .file-upload input[type="file"] { display: none; }
+    .file-upload-text { font-size: 14px; color: #555; margin-bottom: 8px; }
+    .file-upload-hint { font-size: 12px; color: #999; }
+
+    .table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    .table thead { background: #f0f4f8; }
+    .table th { padding: 12px; text-align: left; font-size: 13px; font-weight: 600; color: #555; border-bottom: 2px solid #e0e0e0; }
+    .table td { padding: 12px; border-bottom: 1px solid #e0e0e0; font-size: 13px; }
+    .table tbody tr:hover { background: #f9f9f9; }
+
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .status-pending { background: #fef08a; color: #854d0e; }
+    .status-submitted { background: #dbeafe; color: #0c4a6e; }
+    .status-graded { background: #dcfce7; color: #166534; }
+    .status-approved { background: #c7d2fe; color: #312e81; }
+
+    .checkbox-container { display: flex; align-items: center; gap: 8px; }
+    .checkbox-container input { width: 20px; height: 20px; cursor: pointer; }
+
+    .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+    .modal.active { display: flex; }
+    .modal-content { background: white; border-radius: 14px; padding: 24px; max-width: 500px; width: 90%; max-height: 80%; overflow-y: auto; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+    .modal-header { font-size: 16px; font-weight: 700; color: #1a3a6b; margin-bottom: 16px; }
+    .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+    .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #e0e0e0; border-top-color: #1a56a0; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; }
+    .alert-success { background: #dcfce7; color: #166534; border-left: 4px solid #16a34a; }
+    .alert-error { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .assignment-fields { background: #f9f9f9; padding: 16px; border-radius: 10px; margin-bottom: 16px; }
+    .assignment-field-group { margin-bottom: 12px; }
+
+    @media (max-width: 600px) {
+      .form-row { grid-template-columns: 1fr; }
+      .header { flex-wrap: wrap; height: auto; padding: 12px; }
+      .login-card { width: 90%; }
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com/3.4.17" type="text/javascript"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body>
+  <div id="loginScreen">
+   <div class="login-card">
+    <div class="login-logo">
+     <div class="icon">
+      📚
+     </div>
+     <h1>LKPD Digital</h1>
+     <p>Sistem Manajemen Tugas Siswa</p>
+    </div>
+    <div class="role-tabs">
+     <button class="role-tab active" data-role="siswa">Siswa</button> <button class="role-tab" data-role="guru">Guru</button>
+    </div>
+    <div class="form-group">
+     <label>Nama</label> <input type="text" id="inputName" placeholder="Masukkan nama Anda">
+    </div>
+    <div class="form-group">
+     <label>Email</label> <input type="email" id="inputEmail" placeholder="Masukkan email Anda">
+    </div><button class="btn-login" onclick="handleLogin()">Masuk</button>
+    <div class="hint">
+     🔒 Data Anda aman dan tersimpan di cloud
+    </div>
+   </div>
+  </div>
+  <div id="app">
+   <div class="header">
+    <div class="header-left">
+     <div class="header-logo">
+      📚 LKPD Digital
+     </div>
+     <div class="header-badge" id="roleBadge">
+      Siswa
+     </div>
+    </div>
+    <div class="header-right">
+     <div class="user-info" id="userInfo">
+      User
+     </div><button class="btn-logout" onclick="handleLogout()">Keluar</button>
+    </div>
+   </div>
+   <div class="main-content">
+    <div class="container"><!-- STUDENT VIEW -->
+     <div id="studentView" style="display: none;">
+      <div class="tabs">
+       <button class="tab active" onclick="switchTab('student-assignments')">Tugas Saya</button> <button class="tab" onclick="switchTab('student-submissions')">Submission Saya</button>
+      </div>
+      <div id="student-assignments" class="tab-content">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Daftar Tugas
+         </div>
+        </div>
+        <table class="table">
+         <thead>
+          <tr>
+           <th>No</th>
+           <th>Nama Tugas</th>
+           <th>Materi</th>
+           <th>Status</th>
+           <th>Persetujuan</th>
+           <th>Aksi</th>
+          </tr>
+         </thead>
+         <tbody id="assignmentsList">
+          <tr>
+           <td colspan="6" style="text-align: center; padding: 30px;">Memuat data...</td>
+          </tr>
+         </tbody>
+        </table>
+       </div>
+      </div>
+      <div id="student-submissions" class="tab-content" style="display: none;">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Submission Saya
+         </div>
+        </div>
+        <table class="table">
+         <thead>
+          <tr>
+           <th>No Tugas</th>
+           <th>Tugas</th>
+           <th>Materi</th>
+           <th>Tanggal Kirim</th>
+           <th>File</th>
+           <th>Status</th>
+           <th>Nilai</th>
+           <th>Catatan</th>
+          </tr>
+         </thead>
+         <tbody id="submissionsList">
+          <tr>
+           <td colspan="8" style="text-align: center; padding: 30px;">Memuat data...</td>
+          </tr>
+         </tbody>
+        </table>
+       </div>
+      </div>
+     </div><!-- TEACHER VIEW -->
+     <div id="teacherView" style="display: none;">
+      <div class="tabs"><button class="tab active" onclick="switchTab('teacher-create')">Buat Tugas</button> <button class="tab" onclick="switchTab('teacher-students')">Kelola Siswa</button> <button class="tab" onclick="switchTab('teacher-submissions')">Kelola Submission</button> <button class="tab" onclick="switchTab('teacher-data')">Data Spreadsheet</button>
+      </div><!-- Create Assignment -->
+      <div id="teacher-create" class="tab-content">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Buat Tugas LKPD Baru
+         </div>
+        </div>
+        <form onsubmit="handleCreateAssignment(event)">
+         <div class="form-group"><label>Jumlah LKPD/Tugas (1-20)</label> <input type="number" id="assignmentCount" min="1" max="20" value="3" onchange="generateAssignmentFields(this.value)">
+         </div>
+         <div id="assignmentFieldsContainer"></div><button type="submit" class="btn btn-primary">Buat Semua Tugas</button>
+        </form>
+       </div>
+      </div><!-- Manage Students -->
+      <div id="teacher-students" class="tab-content" style="display: none;">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Daftar Siswa
+         </div>
+        </div>
+        <form onsubmit="handleAddStudent(event)">
+         <div class="form-row">
+          <div class="form-group"><label>Nama Siswa</label> <input type="text" id="studentNameInput" placeholder="Masukkan nama siswa" required>
+          </div>
+          <div class="form-group"><label>Email Siswa</label> <input type="email" id="studentEmailInput" placeholder="Masukkan email siswa" required>
+          </div>
+         </div><button type="submit" class="btn btn-primary">Tambah Siswa</button>
+        </form>
+        <div style="margin-top: 20px;">
+         <h3 style="margin-bottom: 12px; font-weight: 600;">Siswa Terdaftar:</h3>
+         <table class="table">
+          <thead>
+           <tr>
+            <th>Nama Siswa</th>
+            <th>Email</th>
+            <th>Aksi</th>
+           </tr>
+          </thead>
+          <tbody id="studentsList">
+           <tr>
+            <td colspan="3" style="text-align: center; padding: 20px;">Belum ada siswa</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div><!-- Manage Submissions -->
+      <div id="teacher-submissions" class="tab-content" style="display: none;">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Kelola Submission Siswa
+         </div>
+        </div>
+        <table class="table">
+         <thead>
+          <tr>
+           <th>Nama Siswa</th>
+           <th>No Tugas</th>
+           <th>Tugas</th>
+           <th>Tanggal Kirim</th>
+           <th>File</th>
+           <th>Persetujuan</th>
+           <th>Nilai</th>
+           <th>Aksi</th>
+          </tr>
+         </thead>
+         <tbody id="allSubmissionsList">
+          <tr>
+           <td colspan="8" style="text-align: center; padding: 30px;">Memuat data...</td>
+          </tr>
+         </tbody>
+        </table>
+       </div>
+      </div><!-- Data Spreadsheet -->
+      <div id="teacher-data" class="tab-content" style="display: none;">
+       <div class="card">
+        <div class="card-header">
+         <div class="card-title">
+          Data Spreadsheet Siswa &amp; Nilai
+         </div>
+        </div>
+        <div style="overflow-x: auto;">
+         <table class="table" style="font-size: 12px;">
+          <thead>
+           <tr>
+            <th>Nama Siswa</th>
+            <th>Email</th>
+            <th>No Tugas</th>
+            <th>Tugas</th>
+            <th>Materi</th>
+            <th>Tanggal Kirim</th>
+            <th>File</th>
+            <th>Status</th>
+            <th>Persetujuan</th>
+            <th>Nilai</th>
+            <th>Catatan</th>
+           </tr>
+          </thead>
+          <tbody id="spreadsheetData">
+           <tr>
+            <td colspan="11" style="text-align: center; padding: 30px;">Memuat data...</td>
+           </tr>
+          </tbody>
+         </table>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div><!-- Modal Upload Submission -->
+  <div id="submissionModal" class="modal">
+   <div class="modal-content">
+    <div class="modal-header">
+     Kirim Submission Tugas
+    </div>
+    <form onsubmit="handleSubmitAssignment(event)"><input type="hidden" id="selectedAssignmentId"> <input type="hidden" id="selectedAssignmentNo">
+     <div class="form-group"><label>Nama Tugas</label> <input type="text" id="modalAssignmentName" disabled>
+     </div>
+     <div class="form-group"><label>Upload File (PDF, DOC, DOCX, XLS, XLSX)</label>
+      <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+       <div class="file-upload-text">
+        📁 Klik untuk pilih file atau drag &amp; drop
+       </div>
+       <div class="file-upload-hint" id="fileHint">
+        File yang diizinkan: PDF, DOC, DOCX, XLS, XLSX (Maks 10MB)
+       </div><input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx" onchange="handleFileSelect(event)">
+      </div>
+     </div>
+     <div class="form-group"><label>Catatan (Opsional)</label> <textarea id="submissionNotes" placeholder="Masukkan catatan submission Anda..."></textarea>
+     </div>
+     <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeSubmissionModal()">Batal</button> <button type="submit" class="btn btn-primary">Kirim Submission</button>
+     </div>
+    </form>
+   </div>
+  </div><!-- Modal Grade Submission -->
+  <div id="gradeModal" class="modal">
+   <div class="modal-content">
+    <div class="modal-header">
+     Berikan Nilai &amp; Catatan
+    </div>
+    <form onsubmit="handleGradeSubmission(event)"><input type="hidden" id="gradingSubmissionId">
+     <div class="form-group">
+      <label>Nama Siswa</label> <input type="text" id="gradingStudentName" disabled>
+     </div>
+     <div class="form-group">
+      <label>Tugas</label> <input type="text" id="gradingAssignmentName" disabled>
+     </div>
+     <div class="form-group">
+      <label>Nilai (0-100)</label> <input type="number" id="scoreInput" min="0" max="100" placeholder="Masukkan nilai...">
+     </div>
+     <div class="form-group">
+      <label>Catatan Guru</label> <textarea id="gradeNotesInput" placeholder="Masukkan catatan feedback..."></textarea>
+     </div>
+     <div class="modal-footer"><button type="button" class="btn btn-outline" onclick="closeGradeModal()">Batal</button> <button type="submit" class="btn btn-success">Simpan Nilai</button>
+     </div>
+    </form>
+   </div>
+  </div>
+  <script>
+    let currentUser = null;
+    let currentRole = null;
+    let allSubmissions = [];
+    let allAssignments = [];
+
+    const defaultConfig = {
+      app_title: 'LKPD Digital',
+      teacher_name: 'Guru'
+    };
+
+    let config = { ...defaultConfig };
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allSubmissions = data || [];
+        renderAllData();
+      }
+    };
+
+    (async () => {
+      await window.dataSdk.init(dataHandler);
+      
+      const elementConfig = {
+        defaultConfig: defaultConfig,
+        onConfigChange: async (cfg) => {
+          config = cfg;
+          document.querySelector('.header-logo').textContent = `📚 ${config.app_title || 'LKPD Digital'}`;
+        },
+        mapToCapabilities: () => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: () => new Map([
+          ['app_title', config.app_title || defaultConfig.app_title],
+          ['teacher_name', config.teacher_name || defaultConfig.teacher_name]
+        ])
+      };
+      
+      window.elementSdk.init(elementConfig);
+    })();
+
+    document.querySelectorAll('.role-tab').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+        e.target.classList.add('active');
+        currentRole = e.target.dataset.role;
+      });
+    });
+
+    function handleLogin() {
+      const name = document.getElementById('inputName').value.trim();
+      const email = document.getElementById('inputEmail').value.trim();
+
+      if (!name || !email) {
+        showNotification('Nama dan email harus diisi', 'error');
+        return;
+      }
+
+      if (!currentRole) currentRole = 'siswa';
+
+      currentUser = { name, email, role: currentRole };
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('roleBadge').textContent = currentRole === 'siswa' ? 'Siswa' : 'Guru';
+      document.getElementById('userInfo').textContent = `${name} (${email})`;
+
+      if (currentRole === 'siswa') {
+        document.getElementById('studentView').style.display = 'block';
+        document.getElementById('teacherView').style.display = 'none';
+        renderAllData();
+      } else {
+        document.getElementById('studentView').style.display = 'none';
+        document.getElementById('teacherView').style.display = 'block';
+        generateAssignmentFields(3);
+        renderAllData();
+      }
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      currentRole = null;
+      allSubmissions = [];
+      allAssignments = [];
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('inputName').value = '';
+      document.getElementById('inputEmail').value = '';
+    }
+
+    function generateAssignmentFields(count) {
+      const container = document.getElementById('assignmentFieldsContainer');
+      container.innerHTML = '';
+
+      for (let i = 1; i <= count; i++) {
+        const fieldHtml = `
+          <div class="assignment-fields">
+            <h4 style="margin-bottom: 10px; font-weight: 600; color: #1a3a6b;">LKPD/Tugas ${i}</h4>
+            <div class="assignment-field-group">
+              <label style="font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; display: block;">Nama Tugas</label>
+              <input type="text" class="assignment-name" placeholder="Misal: LKPD Bab 1 Matematika" required>
+            </div>
+            <div class="assignment-field-group">
+              <label style="font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; display: block;">Materi</label>
+              <input type="text" class="assignment-material" placeholder="Misal: Aljabar, Persamaan Linear">
+            </div>
+          </div>
+        `;
+        container.innerHTML += fieldHtml;
+      }
+    }
+
+    async function handleCreateAssignment(event) {
+      event.preventDefault();
+      
+      const count = parseInt(document.getElementById('assignmentCount').value);
+      const names = document.querySelectorAll('.assignment-name');
+      const materials = document.querySelectorAll('.assignment-material');
+
+      let createdCount = 0;
+      for (let i = 0; i < count; i++) {
+        const assignmentName = names[i].value.trim();
+        const material = materials[i].value.trim();
+
+        if (!assignmentName) continue;
+
+        const assignment = {
+          id: `assign_${Date.now()}_${i}`,
+          record_type: 'assignment',
+          teacher_email: currentUser.email,
+          teacher_name: currentUser.name,
+          assignment_id: `assign_${Date.now()}_${i}`,
+          assignment_number: (i + 1).toString(),
+          student_name: '',
+          student_email: '',
+          assignment_name: assignmentName,
+          material: material,
+          assignment_date: new Date().toISOString().split('T')[0],
+          submission_date: '',
+          file_name: '',
+          file_type: '',
+          status: 'Aktif',
+          score: '',
+          notes: '',
+          approved: 'Ya'
+        };
+
+        const result = await window.dataSdk.create(assignment);
+        if (result.isOk) {
+          createdCount++;
+          allAssignments.push(assignment);
+        }
+      }
+
+      showNotification(`${createdCount} tugas berhasil dibuat!`, 'success');
+      event.target.reset();
+      generateAssignmentFields(3);
+      renderAllData();
+    }
+
+    async function handleAddStudent(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('studentNameInput').value.trim();
+      const email = document.getElementById('studentEmailInput').value.trim();
+
+      if (!name || !email) return;
+
+      // Cek apakah sudah terdaftar
+      const alreadyExists = allSubmissions.find(s => s.student_email === email && s.record_type === 'student' && s.teacher_email === currentUser.email);
+      if (alreadyExists) {
+        showNotification('Email siswa sudah terdaftar', 'error');
+        return;
+      }
+
+      // Simpan ke database
+      const studentRecord = {
+        id: `student_${Date.now()}`,
+        record_type: 'student',
+        teacher_email: currentUser.email,
+        teacher_name: currentUser.name,
+        assignment_id: `student_${email}`,
+        assignment_number: '0',
+        student_name: name,
+        student_email: email,
+        assignment_name: '',
+        material: '',
+        assignment_date: new Date().toISOString().split('T')[0],
+        submission_date: '',
+        file_name: '',
+        file_type: '',
+        status: 'Terdaftar',
+        score: '',
+        notes: '',
+        approved: 'Ya'
+      };
+
+      const result = await window.dataSdk.create(studentRecord);
+      
+      if (result.isOk) {
+        showNotification(`Siswa ${name} berhasil ditambahkan!`, 'success');
+        document.getElementById('studentNameInput').value = '';
+        document.getElementById('studentEmailInput').value = '';
+        renderAllData();
+      } else {
+        showNotification('Gagal menambahkan siswa', 'error');
+      }
+    }
+
+    function openSubmissionModal(assignmentId, assignmentNo, assignmentName) {
+      document.getElementById('modalAssignmentName').value = assignmentName || '';
+      document.getElementById('selectedAssignmentId').value = assignmentId;
+      document.getElementById('selectedAssignmentNo').value = assignmentNo;
+      document.getElementById('submissionModal').classList.add('active');
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileHint').textContent = 'File yang diizinkan: PDF, DOC, DOCX, XLS, XLSX (Maks 10MB)';
+    }
+
+    function closeSubmissionModal() {
+      document.getElementById('submissionModal').classList.remove('active');
+    }
+
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+      
+      if (!validTypes.includes(file.type)) {
+        document.getElementById('fileHint').textContent = '❌ Format file tidak didukung';
+        return;
+      }
+
+      if (file.size > 10 * 1024 * 1024) {
+        document.getElementById('fileHint').textContent = '❌ File terlalu besar (maks 10MB)';
+        return;
+      }
+
+      document.getElementById('fileHint').textContent = `✓ File: ${file.name}`;
+    }
+
+    async function handleSubmitAssignment(event) {
+      event.preventDefault();
+      const file = document.getElementById('fileInput').files[0];
+      
+      if (!file) {
+        showNotification('Pilih file terlebih dahulu', 'error');
+        return;
+      }
+
+      const assignmentId = document.getElementById('selectedAssignmentId').value;
+      const assignmentNo = document.getElementById('selectedAssignmentNo').value;
+      const assignmentName = document.getElementById('modalAssignmentName').value;
+      
+      // Cari materi dari data tugas 
+      const assignmentData = allSubmissions.find(s => s.assignment_id === assignmentId && s.record_type === 'assignment');
+      const material = assignmentData?.material || '';
+      const teacherEmail = assignmentData?.teacher_email || '';
+
+      const newSubmission = {
+        id: `sub_${Date.now()}`,
+        record_type: 'submission',
+        teacher_email: teacherEmail,
+        teacher_name: assignmentData?.teacher_name || '',
+        assignment_id: assignmentId,
+        assignment_number: assignmentNo,
+        student_name: currentUser.name,
+        student_email: currentUser.email,
+        assignment_name: assignmentName,
+        material: material,
+        assignment_date: assignmentData?.assignment_date || new Date().toISOString().split('T')[0],
+        submission_date: new Date().toISOString().split('T')[0],
+        file_name: file.name,
+        file_type: file.type,
+        status: 'Dikumpul',
+        score: '',
+        notes: document.getElementById('submissionNotes').value,
+        approved: 'Menunggu'
+      };
+
+      const result = await window.dataSdk.create(newSubmission);
+      
+      if (result.isOk) {
+        closeSubmissionModal();
+        document.getElementById('submissionNotes').value = '';
+        showNotification('Submission berhasil dikumpulkan!', 'success');
+        renderAllData();
+      } else {
+        showNotification('Gagal menyimpan submission', 'error');
+      }
+    }
+
+    function renderAllData() {
+      if (currentRole === 'siswa') {
+        renderStudentAssignments();
+        renderStudentSubmissions();
+      } else {
+        renderStudentsList();
+        renderAllSubmissions();
+        renderSpreadsheet();
+      }
+    }
+
+    function renderStudentAssignments() {
+      const tbody = document.getElementById('assignmentsList');
+      
+      // Cek apakah siswa ini terdaftar di guru manapun
+      const isRegistered = allSubmissions.find(s => s.student_email === currentUser.email && s.record_type === 'student');
+      
+      if (!isRegistered) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: #999;">Anda belum terdaftar di sistem ini. Hubungi guru untuk didaftarkan.</td></tr>';
+        return;
+      }
+      
+      // Ambil teacher_email dari student record
+      const teacherEmail = isRegistered.teacher_email;
+      
+      // Filter tugas dari guru yang mendaftarkan siswa ini
+      const allAvailableAssignments = allSubmissions.filter(s => s.record_type === 'assignment' && s.teacher_email === teacherEmail);
+      
+      if (allAvailableAssignments.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px;">Belum ada tugas dari guru</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = allAvailableAssignments.map((a, idx) => {
+        const userSubmission = allSubmissions.find(s => s.assignment_id === a.assignment_id && s.student_email === currentUser.email && s.record_type === 'submission');
+        const isApproved = userSubmission?.approved === 'Ya' ? true : false;
+        const nextNumber = parseInt(a.assignment_number) + 1;
+        const nextAssignment = allAvailableAssignments.find(as => as.assignment_number === nextNumber.toString());
+        const canSubmit = parseInt(a.assignment_number) === 1 || isApproved;
+
+        const statusBadgeClass = userSubmission ? 'status-submitted' : 'status-pending';
+        const statusText = userSubmission ? 'Dikumpul' : 'Belum Dikumpul';
+        const approvalBadgeClass = isApproved ? 'status-approved' : userSubmission ? 'status-pending' : 'status-pending';
+        const approvalText = isApproved ? '✓ Disetujui' : userSubmission ? 'Menunggu' : '-';
+
+        return `<tr>
+          <td>${a.assignment_number}</td>
+          <td>${a.assignment_name}</td>
+          <td>${a.material || '-'}</td>
+          <td><span class="status-badge ${statusBadgeClass}">${statusText}</span></td>
+          <td><span class="status-badge ${approvalBadgeClass}">${approvalText}</span></td>
+          <td>${canSubmit ? `<button class="btn btn-sm btn-primary" onclick="openSubmissionModal('${a.assignment_id}', '${a.assignment_number}', '${a.assignment_name}')">Kumpul</button>` : '<span style="font-size: 11px; color: #999;">Tunggu persetujuan</span>'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function renderStudentSubmissions() {
+      const tbody = document.getElementById('submissionsList');
+      const userSubmissions = allSubmissions.filter(s => s.student_email === currentUser.email && s.record_type === 'submission');
+
+      tbody.innerHTML = userSubmissions.length === 0 
+        ? '<tr><td colspan="8" style="text-align: center; padding: 20px;">Belum ada submission</td></tr>'
+        : userSubmissions.map(s => `<tr>
+            <td>${s.assignment_number}</td>
+            <td>${s.assignment_name}</td>
+            <td>${s.material || '-'}</td>
+            <td>${new Date(s.submission_date).toLocaleDateString('id-ID')}</td>
+            <td>${s.file_name}</td>
+            <td><span class="status-badge ${s.approved === 'Ya' ? 'status-approved' : 'status-submitted'}">${s.score ? 'Dinilai' : s.status}</span></td>
+            <td>${s.score || '-'}</td>
+            <td>${s.notes || '-'}</td>
+          </tr>`).join('');
+    }
+
+    function renderStudentsList() {
+      const tbody = document.getElementById('studentsList');
+      // Filter siswa yang didaftarkan oleh guru ini
+      const students = allSubmissions.filter(s => s.record_type === 'student' && s.teacher_email === currentUser.email);
+      
+      tbody.innerHTML = students.length === 0
+        ? '<tr><td colspan="3" style="text-align: center; padding: 20px;">Belum ada siswa</td></tr>'
+        : students.map(s => `<tr>
+            <td>${s.student_name}</td>
+            <td>${s.student_email}</td>
+            <td><button class="btn btn-sm btn-danger" onclick="removeStudent('${s.__backendId}')">Hapus</button></td>
+          </tr>`).join('');
+    }
+
+    function removeStudent(backendId) {
+      const student = allSubmissions.find(s => s.__backendId === backendId);
+      if (!student) return;
+
+      window.dataSdk.delete(student).then(result => {
+        if (result.isOk) {
+          showNotification('Siswa berhasil dihapus!', 'success');
+          renderAllData();
+        } else {
+          showNotification('Gagal menghapus siswa', 'error');
+        }
+      });
+    }
+
+    function renderAllSubmissions() {
+      const tbody = document.getElementById('allSubmissionsList');
+      
+      // Filter hanya submission dari siswa guru ini
+      const studentSubmissions = allSubmissions.filter(s => s.record_type === 'submission' && s.teacher_email === currentUser.email);
+      
+      tbody.innerHTML = studentSubmissions.length === 0
+        ? '<tr><td colspan="8" style="text-align: center; padding: 20px;">Belum ada submission</td></tr>'
+        : studentSubmissions.map(s => `<tr>
+            <td>${s.student_name}</td>
+            <td>${s.assignment_number}</td>
+            <td>${s.assignment_name}</td>
+            <td>${new Date(s.submission_date).toLocaleDateString('id-ID')}</td>
+            <td>${s.file_name}</td>
+            <td><div class="checkbox-container">
+              <input type="checkbox" ${s.approved === 'Ya' ? 'checked' : ''} onchange="toggleApproval('${s.__backendId}', this.checked)">
+              <span>${s.approved === 'Ya' ? 'Disetujui' : 'Menunggu'}</span>
+            </div></td>
+            <td>${s.score || '-'}</td>
+            <td><button class="btn btn-sm btn-warning" onclick="openGradeModal('${s.__backendId}')">Nilai</button></td>
+          </tr>`).join('');
+    }
+
+    async function toggleApproval(backendId, isApproved) {
+      const submission = allSubmissions.find(s => s.__backendId === backendId);
+      if (!submission) return;
+
+      const updated = {
+        ...submission,
+        approved: isApproved ? 'Ya' : 'Menunggu'
+      };
+
+      const result = await window.dataSdk.update(updated);
+      if (result.isOk) {
+        showNotification(isApproved ? 'Submission disetujui!' : 'Persetujuan dibatalkan', 'success');
+        renderAllData();
+      } else {
+        showNotification('Gagal mengubah persetujuan', 'error');
+      }
+    }
+
+    function renderSpreadsheet() {
+      const tbody = document.getElementById('spreadsheetData');
+      
+      // Filter hanya submission dari siswa guru ini
+      const studentSubmissions = allSubmissions.filter(s => s.record_type === 'submission' && s.teacher_email === currentUser.email);
+      
+      tbody.innerHTML = studentSubmissions.length === 0
+        ? '<tr><td colspan="11" style="text-align: center; padding: 20px;">Belum ada data</td></tr>'
+        : studentSubmissions.map(s => `<tr>
+            <td>${s.student_name}</td>
+            <td>${s.student_email}</td>
+            <td>${s.assignment_number}</td>
+            <td>${s.assignment_name}</td>
+            <td>${s.material || '-'}</td>
+            <td>${new Date(s.submission_date).toLocaleDateString('id-ID')}</td>
+            <td>${s.file_name}</td>
+            <td>${s.score ? 'Dinilai' : s.status}</td>
+            <td>${s.approved === 'Ya' ? '✓' : '-'}</td>
+            <td>${s.score || '-'}</td>
+            <td>${s.notes || '-'}</td>
+          </tr>`).join('');
+    }
+
+    function openGradeModal(backendId) {
+      const submission = allSubmissions.find(s => s.__backendId === backendId);
+      if (!submission) return;
+
+      document.getElementById('gradingSubmissionId').value = backendId;
+      document.getElementById('gradingStudentName').value = submission.student_name;
+      document.getElementById('gradingAssignmentName').value = submission.assignment_name;
+      document.getElementById('scoreInput').value = submission.score || '';
+      document.getElementById('gradeNotesInput').value = submission.notes || '';
+      document.getElementById('gradeModal').classList.add('active');
+    }
+
+    function closeGradeModal() {
+      document.getElementById('gradeModal').classList.remove('active');
+    }
+
+    async function handleGradeSubmission(event) {
+      event.preventDefault();
+      
+      const backendId = document.getElementById('gradingSubmissionId').value;
+      const score = document.getElementById('scoreInput').value;
+      const notes = document.getElementById('gradeNotesInput').value;
+      
+      const submission = allSubmissions.find(s => s.__backendId === backendId);
+      if (!submission) return;
+
+      const updated = {
+        ...submission,
+        score: score,
+        notes: notes
+      };
+
+      const result = await window.dataSdk.update(updated);
+      
+      if (result.isOk) {
+        closeGradeModal();
+        showNotification('Nilai berhasil disimpan!', 'success');
+        renderAllData();
+      } else {
+        showNotification('Gagal menyimpan nilai', 'error');
+      }
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabName).style.display = 'block';
+      event.target.classList.add('active');
+    }
+
+    function showNotification(message, type) {
+      const alertDiv = document.createElement('div');
+      alertDiv.className = `alert alert-${type}`;
+      alertDiv.style.position = 'fixed';
+      alertDiv.style.top = '20px';
+      alertDiv.style.right = '20px';
+      alertDiv.style.zIndex = '2000';
+      alertDiv.style.maxWidth = '400px';
+      alertDiv.textContent = message;
+      document.body.appendChild(alertDiv);
+
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 3000);
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9f4c762d501c4b1b',t:'MTc3NzYxNDEzMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
