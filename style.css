@@ -1,0 +1,151 @@
+/* Reset dan base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  min-height: 100vh;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Modal transitions */
+.modal {
+  transition: all 0.3s ease;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal.flex {
+  display: flex;
+}
+
+/* Card hover effects */
+.hover\:shadow-lg:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+  transform: translateY(-2px);
+}
+
+/* Button active states */
+button:active {
+  transform: scale(0.98);
+}
+
+/* Tab active styles */
+.teacher-tab.active,
+.student-tab.active {
+  background-color: #fff !important;
+  color: #2563eb !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.student-tab.active {
+  color: #16a34a !important;
+}
+
+/* Transition */
+.transition {
+  transition: all 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .max-w-6xl {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .grid {
+    gap: 1rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+  }
+}
+
+/* Utility classes */
+.hidden {
+  display: none;
+}
+
+.flex {
+  display: flex;
+}
+
+.fixed {
+  position: fixed;
+}
+
+.inset-0 {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.z-50 {
+  z-index: 50;
+}
+
+.bg-black {
+  background-color: black;
+}
+
+.bg-opacity-50 {
+  opacity: 0.5;
+}
+
+.overflow-auto {
+  overflow: auto;
+}
+
+.overflow-y-auto {
+  overflow-y: auto;
+}
