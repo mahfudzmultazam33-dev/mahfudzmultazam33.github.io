@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LKPD Digital</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-600 to-purple-700 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-6 max-w-5xl"></div>
+    <script>
+        // GANTI URL INI dengan URL Web App Anda!
+        const API_BASE = 'https://script.google.com/macros/s/https://script.google.com/macros/s/AKfycbys2T-tlnBYc-jgtMC3nvW--mxI3p5vDzBe81h50aeOw61PR8rbZAjTnqVOw93iG-jLQQ/exec/exec';
+        
+        let currentUser = null;
+        let allSiswa = [], allTugas = [], allPengumpulan = [];
+        
+        async function callAPI(action, params = {}) {
+            params.action = action;
+            if (currentUser?.role === 'guru') params.password = 'guru123';
+            const url = new URL(API_BASE);
+            Object.keys(params).forEach(k => { if (params[k]) url.searchParams.append(k, params[k]); });
+            try {
+                const res = await fetch(url.toString());
+                return await res.json();
+            } catch(err) {
+                Swal.fire('Error', 'Gagal koneksi ke server', 'error');
+                return { error: err.message };
+            }
+        }
+        
+        async function render() {
+            const app = document.getElementById('app');
+            if (!currentUser) {
+                app.innerHTML = `<div class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl p-8 mt-20">
+                    <div class="text-center mb-8"><div class="text-6xl mb-4">📚</div><h1 class="text-3xl font-bold text-blue-600">LKPD Digital</h1></div>
+                    <div class="space-y-4"><button onclick="loginGuru()" class="w-full bg-blue-600 text-white py-3 rounded-xl">👨‍🏫 Guru</button>
+                    <button onclick="loginSiswa()" class="w-full bg-green-600 text-white py-3 rounded-xl">👨‍🎓 Siswa</button></div></div>`;
+            } else if (currentUser.role === 'guru') {
+                await loadGuruData();
+                app.innerHTML = renderGuruDashboard();
+            } else {
+                await loadSiswaData();
+                app.innerHTML = renderSiswaDashboard();
+            }
+            attachEvents();
+        }
+        
+        async function loginGuru() {
+            const { value: pwd } = await Swal.fire({ title: 'Login Guru', input: 'password', inputLabel: 'Kode Guru', showCancelButton: true });
+            if (pwd === 'guru123') { currentUser = { role: 'guru' }; render(); }
+            else if (pwd) Swal.fire('Error', 'Kode salah!', 'error');
+        }
+        
+        async function loginSiswa() {
+            const { value: form } = await Swal.fire({
+                title: 'Login Siswa',
+                html: `<input id="nama" class="swal2-input" placeholder="Nama"><input id="pass" class="swal2-input" type="password" placeholder="Password">`,
+                preConfirm: () => ({ nama: document.getElementById('nama').value, pass: document.getElementById('pass').value })
+            });
+            if (form) {
+                const res = await callAPI('loginSiswa', { nama: form.nama, password: form.pass });
+                if (res.success) { currentUser = { role: 'siswa', ...res.siswa }; render(); }
+                else Swal.fire('Gagal', res.error, 'error');
+            }
+        }
+        
+        async function loadGuruData() {
+            allSiswa = await callAPI('getSiswa');
+            allTugas = await callAPI('getTugas');
+            allPengumpulan = await callAPI('getPengumpulan');
+        }
+        
+        async function loadSiswaData() {
+            allTugas = await callAPI('getTugas');
+            allPengumpulan = await callAPI('getPengumpulan', { siswaId: currentUser.id });
+        }
+        
+        function renderGuruDashboard() {
+            return `<div class="bg-white rounded-xl shadow-xl"><div class="bg-blue-600 text-white p-5 rounded-t-xl flex justify-between"><h2 class="text-2xl font-bold">Dashboard Guru</h2><button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Keluar</button></div>
+            <div class="p-6"><div class="flex gap-2 border-b mb-5"><button class="tab-btn active px-4 py-2" data-tab="siswa">📋 Siswa</button><button class="tab-btn px-4 py-2" data-tab="tugas">📝 Tugas</button><button class="tab-btn px-4 py-2" data-tab="nilai">✅ Nilai</button></div>
+            <div id="tab-siswa" class="tab-content"><div class="flex gap-2 mb-4"><input type="text" id="namaSiswa" placeholder="Nama" class="flex-1 border p-2 rounded"><input type="text" id="kelasSiswa" placeholder="Kelas" class="w-32 border p-2 rounded"><button onclick="tambahSiswa()" class="bg-green-600 text-white px-4 py-2 rounded">Tambah</button></div><div id="siswaList">${renderSiswaList()}</div></div>
+            <div id="tab-tugas" class="tab-content hidden"><button onclick="showTugasModal()" class="bg-blue-600 text-white px-4 py-2 rounded mb-4">+ Tugas Baru</button><div id="tugasList">${renderTugasList()}</div></div>
+            <div id="tab-nilai" class="tab-content hidden"><div id="nilaiList">${renderNilaiList()}</div></div></div></div>
+            <div id="tugasModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50"><div class="bg-white rounded-xl p-6 w-full max-w-md"><h3 class="text-xl font-bold mb-4" id="modalTitle">Tugas Baru</h3><input type="hidden" id="editId"><input type="text" id="judul" placeholder="Judul" class="w-full border p-2 rounded mb-3"><textarea id="deskripsi" placeholder="Deskripsi" class="w-full border p-2 rounded mb-3" rows="3"></textarea><input type="date" id="deadline" class="w-full border p-2 rounded mb-3"><input type="number" id="maxNilai" placeholder="Nilai Maksimal" class="w-full border p-2 rounded mb-4" value="100"><div class="flex justify-end gap-2"><button onclick="closeTugasModal()" class="bg-gray-400 px-4 py-2 rounded">Batal</button><button onclick="simpanTugas()" class="bg-blue-600 text-white px-4 py-2 rounded">Simpan</button></div></div></div>`;
+        }
+        
+        function renderSiswaList() {
+            if (!allSiswa.length) return '<p class="text-gray-500">Belum ada siswa</p>';
+            return allSiswa.map(s => `<div class="border p-3 rounded mb-2 flex justify-between"><div><b>${escapeHtml(s.nama)}</b> - ${escapeHtml(s.kelas)}<br><small>Password: ${s.password}</small></div><button onclick="hapusSiswa('${s.id}')" class="text-red-600">Hapus</button></div>`).join('');
+        }
+        
+        function renderTugasList() {
+            if (!allTugas.length) return '<p class="text-gray-500">Belum ada tugas</p>';
+            return allTugas.map(t => `<div class="border p-4 rounded mb-3"><div class="flex justify-between"><div><h4 class="font-bold">${escapeHtml(t.judul)}</h4><p class="text-sm">${escapeHtml(t.deskripsi)}</p><p class="text-xs text-gray-500">Deadline: ${t.deadline}</p></div><div><button onclick="editTugas('${t.id}')" class="text-blue-600 mr-2">Edit</button><button onclick="hapusTugas('${t.id}')" class="text-red-600">Hapus</button>${t.status_selesai !== 'Selesai' ? `<button onclick="selesaikanTugas('${t.id}')" class="text-green-600 ml-2">Selesai</button>` : ''}</div></div></div>`).join('');
+        }
+        
+        function renderNilaiList() {
+            if (!allPengumpulan.length) return '<p class="text-gray-500">Belum ada pengumpulan</p>';
+            return allPengumpulan.map(p => {
+                const siswa = allSiswa.find(s => s.id == p.siswa_id);
+                const tugas = allTugas.find(t => t.id == p.tugas_id);
+                return `<div class="border p-4 rounded mb-3"><div class="flex justify-between flex-wrap"><div><b>${escapeHtml(siswa?.nama)}</b> - ${escapeHtml(tugas?.judul)}<p class="text-sm bg-gray-100 p-2 rounded mt-2">${escapeHtml(p.jawaban)}</p>${p.feedback ? `<p class="text-xs mt-1">Feedback: ${escapeHtml(p.feedback)}</p>` : ''}</div><div class="text-right">${p.status_dinilai === 'Sudah' ? `<span class="text-green-600 font-bold">Nilai: ${p.nilai}</span>` : `<button onclick="beriNilai('${p.id}')" class="bg-yellow-500 text-white px-3 py-1 rounded text-sm">Beri Nilai</button>`}<br>${p.disetujui === 'Ya' ? `<span class="text-green-500 text-sm">✓ Disetujui</span>` : (p.status_dinilai === 'Sudah' ? `<button onclick="setujuiTugas('${p.id}')" class="bg-blue-500 text-white px-3 py-1 rounded text-sm mt-1">Setujui</button>` : `<span class="text-gray-400 text-sm">Menunggu</span>`)}</div></div></div>`;
+            }).join('');
+        }
+        
+        function renderSiswaDashboard() {
+            const tugasAktif = allTugas.filter(t => t.status_selesai !== 'Selesai');
+            return `<div class="bg-white rounded-xl shadow-xl"><div class="bg-green-600 text-white p-5 rounded-t-xl flex justify-between"><div><h2 class="text-2xl font-bold">Dashboard Siswa</h2><p>Halo, ${escapeHtml(currentUser.nama)}</p></div><button onclick="logout()" class="bg-red-500 px-4 py-2 rounded">Keluar</button></div><div class="p-6"><h3 class="font-bold mb-4">📝 Tugas</h3>${tugasAktif.map(t => { const sub = allPengumpulan.find(p => p.tugas_id == t.id); return `<div class="border p-4 rounded mb-3"><div class="flex justify-between"><div><h4 class="font-bold">${escapeHtml(t.judul)}</h4><p class="text-sm">${escapeHtml(t.deskripsi)}</p><p class="text-xs text-gray-500">Deadline: ${t.deadline}</p></div><div>${sub ? (sub.disetujui === 'Ya' ? `<span class="text-green-600">✓ Selesai (${sub.nilai})</span>` : `<span class="text-yellow-600">Menunggu</span>`) : `<button onclick="kumpulTugas('${t.id}')" class="bg-green-600 text-white px-4 py-2 rounded">Kumpulkan</button>`}</div></div>${sub?.feedback ? `<p class="text-sm text-gray-500 mt-2">Feedback: ${escapeHtml(sub.feedback)}</p>` : ''}</div>`; }).join('')}${tugasAktif.length === 0 ? '<p>Semua tugas selesai! 🎉</p>' : ''}</div></div>`;
+        }
+        
+        async function tambahSiswa() {
+            const nama = document.getElementById('namaSiswa')?.value, kelas = document.getElementById('kelasSiswa')?.value;
+            if (!nama || !kelas) return Swal.fire('Lengkapi data!');
+            await callAPI('addSiswa', { nama, kelas });
+            await loadGuruData();
+            document.getElementById('siswaList').innerHTML = renderSiswaList();
+            document.getElementById('namaSiswa').value = '';
+            document.getElementById('kelasSiswa').value = '';
+        }
+        
+        async function hapusSiswa(id) {
+            if (await confirmHapus()) { await callAPI('deleteSiswa', { id }); await loadGuruData(); document.getElementById('siswaList').innerHTML = renderSiswaList(); }
+        }
+        
+        function showTugasModal(edit = null) {
+            document.getElementById('editId').value = ''; document.getElementById('judul').value = ''; document.getElementById('deskripsi').value = ''; document.getElementById('deadline').value = ''; document.getElementById('maxNilai').value = '100';
+            if (edit) { document.getElementById('editId').value = edit.id; document.getElementById('judul').value = edit.judul; document.getElementById('deskripsi').value = edit.deskripsi; document.getElementById('deadline').value = edit.deadline; document.getElementById('maxNilai').value = edit.nilai_maksimal; document.getElementById('modalTitle').innerText = 'Edit Tugas'; }
+            else document.getElementById('modalTitle').innerText = 'Tugas Baru';
+            document.getElementById('tugasModal').classList.remove('hidden'); document.getElementById('tugasModal').classList.add('flex');
+        }
+        
+        function closeTugasModal() { document.getElementById('tugasModal').classList.add('hidden'); document.getElementById('tugasModal').classList.remove('flex'); }
+        
+        async function simpanTugas() {
+            const id = document.getElementById('editId').value, judul = document.getElementById('judul').value, deskripsi = document.getElementById('deskripsi').value, deadline = document.getElementById('deadline').value, maxNilai = document.getElementById('maxNilai').value;
+            if (!judul || !deskripsi || !deadline) return Swal.fire('Lengkapi data!');
+            if (id) await callAPI('updateTugas', { id, judul, deskripsi, deadline, nilai_maksimal: maxNilai });
+            else await callAPI('addTugas', { judul, deskripsi, deadline, nilai_maksimal: maxNilai });
+            await loadGuruData(); document.getElementById('tugasList').innerHTML = renderTugasList(); closeTugasModal();
+        }
+        
+        async function editTugas(id) { const tugas = allTugas.find(t => t.id == id); if (tugas) showTugasModal(tugas); }
+        async function hapusTugas(id) { if (await confirmHapus()) { await callAPI('deleteTugas', { id }); await loadGuruData(); document.getElementById('tugasList').innerHTML = renderTugasList(); } }
+        async function selesaikanTugas(tugasId) { await callAPI('selesaikanTugas', { tugasId }); await loadGuruData(); document.getElementById('tugasList').innerHTML = renderTugasList(); }
+        
+        async function kumpulTugas(tugasId) {
+            const { value: jawaban } = await Swal.fire({ title: 'Kumpulkan Jawaban', input: 'textarea', inputPlaceholder: 'Tulis jawaban...', showCancelButton: true });
+            if (jawaban) { await callAPI('kumpulTugas', { tugas_id: tugasId, siswa_id: currentUser.id, jawaban }); await loadSiswaData(); render(); Swal.fire('Berhasil!', 'Tugas dikumpulkan', 'success'); }
+        }
+        
+        async function beriNilai(id) {
+            const { value: form } = await Swal.fire({ title: 'Beri Nilai', html: '<input id="nilai" type="number" class="swal2-input" placeholder="Nilai"><textarea id="feedback" class="swal2-textarea" placeholder="Feedback"></textarea>', preConfirm: () => ({ nilai: document.getElementById('nilai').value, feedback: document.getElementById('feedback').value }) });
+            if (form && form.nilai) { await callAPI('beriNilai', { submission_id: id, nilai: form.nilai, feedback: form.feedback }); await loadGuruData(); document.getElementById('nilaiList').innerHTML = renderNilaiList(); Swal.fire('Berhasil', 'Nilai disimpan', 'success'); }
+        }
+        
+        async function setujuiTugas(id) { await callAPI('setujuiTugas', { submission_id: id }); await loadGuruData(); document.getElementById('nilaiList').innerHTML = renderNilaiList(); Swal.fire('Disetujui!', '', 'success'); }
+        
+        function logout() { currentUser = null; render(); }
+        function attachEvents() { document.querySelectorAll('.tab-btn').forEach(btn => { btn.onclick = () => { document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('hidden'); }; }); }
+        function escapeHtml(str) { if (!str) return ''; return String(str).replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+        function confirmHapus() { return Swal.fire({ title: 'Yakin hapus?', icon: 'warning', showCancelButton: true }).then(r => r.isConfirmed); }
+        
+        render();
+    </script>
+</body>
+</html>
